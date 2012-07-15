@@ -16,3 +16,19 @@ tmp
 .yardoc
 _yardoc
 doc/
+
+# Intellij artifacts
+.idea
+*.iml
+
+# RVM
+.rvmrc
+
+# VIM
+*~
+
+# rspec output directory
+target
+
+# local ruby symbolic link to fool IDE
+ruby
