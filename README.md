@@ -1,8 +1,14 @@
 # PgMigrate
 
-TODO: Write a gem description
+The ruby implementation of pg_migrate.  
+
+With this gem, there are two primary features:
+* Manifest Builder - process a user's pg_migrate manifest into a stable set of SQL migration scripts
+* Migrator - migrate a database, using a built pg_migrate manifest
 
 ## Installation
+
+**NOTE: this gem is not yet published**
 
 Add this line to your application's Gemfile:
 
