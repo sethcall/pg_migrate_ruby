@@ -7,182 +7,94 @@ module PgMigrate
 
   class Migrator
 
-    # possible connections (taken from pg documenttion)
-
-    #host
-    #
-    #    server hostname
-    #hostaddr
-    #
-    #    server address (avoids hostname lookup, overrides host)
-    #port
-    #
-    #    server port number
-    #dbname
-    #
-    #    connecting database name
-    #user
-    #
-    #    login user name
-    #password
-    #
-    #    login password
-    #connect_timeout
-    #
-    #    maximum time to wait for connection to succeed
-    #options
-    #
-    #    backend options
-    #tty
-    #
-    #    (ignored in newer versions of PostgreSQL)
-    #sslmode
-    #
-    #    (disable|allow|prefer|require)
-    #krbsrvname
-    #
-    #    kerberos service name
-    #gsslib
-    #      .
-    #    GSS library to use for GSSAPI authentication
-    #service
-    #
-    #    service name to use for additional parameters
+    # options = gem 'pg' connection_hash options
     def initialize(manifest_reader, sql_reader, options = {})
+      @log = Logging.logger[self]
       @connection_hash = options
       @manifest = nil
+      @builder_version = nil
       @manifest_reader = manifest_reader
       @sql_reader = sql_reader
     end
 
-    # the primary interface into this gem.
-    # manifest_path = the directory containing your 'manifest' file, and you 'migrations' directory
+    # 'migrate' attempt to migrate your database based on the contents of your built manifest
+    # The manifest_path argument should point to your manifest
+    # manifest_path = the directory containing your 'manifest' file, 'up' directory, 'down' directory, 'test' directory
+    # this method will throw an exception if anything goes wrong (such as bad SQL in the migrations themselves)
     def migrate(manifest_path)
       @manifest_path = manifest_path
 
-      @conn = PG::Connection.open(@connection_hash)
-      @conn.exec("SET TRANSACTION SERIALIZABLE").clear
+      if !@connection_hash[:pgconn].nil?
+        @conn = @connection_hash[:pgconn]
+      else
+        @conn = PG::Connection.open(@connection_hash)
+      end
 
-      process_manifest(@manifest_path)
+      # this is used to record the version of the 'migrator' in the pg_migrate table
+      @conn.exec("SET application_name = 'pg_migrate_ruby-#{PgMigrate::VERSION}'")
 
-      run_migrations(@manifest, @conn)
+      # load the manifest, and version of the builder that made it
+      process_manifest()
+
+      # execute the migrations
+      run_migrations()
+    end
+
+    # load the manifest's migration declarations, and validate that each migration points to a real file
+    def process_manifest
+      @manifest, @builder_version = @manifest_reader.load_output_manifest(@manifest_path)
+      @manifest_reader.validate_migration_paths(@manifest_path, @manifest)
     end
 
     # run all necessary migrations
-    def run_migrations(manifest)
+    def run_migrations
 
-      bootstrap_migration_table
+      # run bootstrap before user migrations to prepare database
+      run_bootstrap
 
-      while true
-        todo = pending_migrations(@manifest, read_executed())
-
-        if todo.length == 0
-          break
-        end
-
-        execute_migration(todo[0])
+      # loop through the manifest, executing migrations in turn
+      manifest.each_with_index do |migration, index|
+        execute_migration(migration.name, migration.filepath)
       end
 
+    end
+
+    # executes the bootstrap method
+    def run_bootstrap
+      bootstrap = File.join(@manifest_path, UP_DIRNAME, BOOTSTRAP_FILENAME)
+      execute_migration('bootstrap.sql', bootstrap)
     end
 
     # execute a single migration by loading it's statements from file, and then executing each
-    def execute_migration(migration)
-      statements = load_migration(migration.filepath)
+    def execute_migration(name, filepath)
+      @log.debug "executing migration #{filepath}"
+
+      statements = @sql_reader.load_migration(filepath)
       if statements.length == 0
         raise 'no statements found in migration #{migration_path}'
       end
-      run_migration(statements)
+      run_migration(name, statements)
     end
 
-    # execute all the statements of a singel migration
-    def run_migration(statements)
-      statements.each do |statement|
-        @conn.exec(statement).clear
-      end
-    end
+    # execute all the statements of a single migration
+    def run_migration(name, statements)
 
-    # determine which migrations stil need to be run
-    def pending_migrations(manifest, executed)
-      todo = []
-
-      if executed.length > manifest.length
-        raise 'the manifest declares less items than have already executed against this database instance. Likely old code deployed'
-      end
-
-      last_index = 0
-
-      # loop through the manifest, and verify same indexed 'executed' is ok, and find what remains of the manifest todo
-      manifest.each_with_index do |manifest_migration, index|
-        if executed.length > index
-          # compare executed and expected migration
-          executed_migration = executed[index]
-          # compare and make sure we are ok.
-          if manifest_migration.name != executed_migration.name
-            raise "#{manifest_migration.inspect} does not match existing migration: #{executed_migration.inspect}.  Perhaps you have branched the migrations and need to merge back in."
+      @conn.transaction do |transaction|
+        begin
+          statements.each do |statement|
+            transaction.exec(statement).clear
           end
-
-          # TODO compare md5? production?
-        else
-          # we've found the end of our executed.  rip the rest of executed statements out
-          last_index = index + 1
-          break
+        rescue Exception => e
+          # we make a special allowance for one exception; it just means this migration
+          # has already occured, and we should just treat it like a continue
+          if e.message.index('pg_migrate: code=migration_exists').nil?
+            raise e
+          else
+            @log.debug "skipping migration #{name}"
+          end
         end
       end
-
-      return manifest[last_index..manifest.length]
     end
-
-    # dig out of the migration table all already-executed migrations
-    def read_executed()
-      executed = []
-      result = @conn.exec("select name, ordinal, created, production from pg_migrations order by ordinal")
-      values = result.values
-      values.each do |value|
-        migration = Migration.new
-        migration.name = value["name"]
-        migration.ordinal = value["ordinal"]
-        migration.created = value["created"]
-        migration.production = value["production"]
-        executed.push(migration)
-      end
-
-      result.clear
-      return executed
-    end
-
   end
-
-  # create our migrations table if it doesn't exist
-  def bootstrap_migration_table()
-    if !migration_table_exists?
-      create_migration_table
-    end
-
-  end
-
-  # lock the migration against anything.  useful when multiple migrators are running at the same time
-  def lock_table
-    @conn.exec("lock table pg_migrations in ACCESS EXCLUSIVE mode").clear
-  end
-
-  # does the migration table exist already?
-  def migration_table_exists?
-    result = @conn.exec("select table_name from information_schema.tables where table_name = 'pg_migrations")
-    exists = result.count == 1
-    result.clear
-    return exists
-  end
-
-  # create the migration table sql statement executor
-  def create_migration_table
-    @conn.exec("create table pg_migrations (name varchar(255) primary key, ordinal integer not null, created timestamp default current_timestamp, md5 varchar(255) not null, production smallint default 1)").clear
-  end
-
-  # load the manifest's migration declarations, and validate that each migration points to a real file
-  def process_manifest(manifest_path)
-    @manifest = load_manifest(manifest_path)
-    validate_migration_paths(manifest_path, @manifest)
-  end
-
-
 end
+

@@ -18,11 +18,15 @@ DOWN_DIRNAME = 'down'
 TESTDIRNAME = 'test'
 # name of the bootstrap.sql file
 BOOTSTRAP_FILENAME = "bootstrap.sql"
+# built manifest version header
+BUILDER_VERSION_HEADER="# pg_migrate-"
 
 
 ### SQL CONSTANTS ###
 PG_MIGRATE_TABLE = "pg_migrate"
 PG_MIGRATIONS_TABLE = "pg_migrations"
+
+
 
 module PgMigrate
   # Your code goes here...

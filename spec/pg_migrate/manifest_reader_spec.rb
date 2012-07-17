@@ -7,7 +7,7 @@ describe ManifestReader do
   end
 
   it "load single manifest" do
-    manifest = @manifest_reader.load_manifest("spec/pg_migrate/input_manifests/single_manifest")
+    manifest = @manifest_reader.load_input_manifest("spec/pg_migrate/input_manifests/single_manifest")
 
     manifest.length.should == 1
     manifest[0].name.should == "single1.sql"

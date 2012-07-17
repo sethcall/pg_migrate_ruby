@@ -55,7 +55,7 @@ module PgMigrate
         conn_properties = pg_connection_hasher
 
         conn_properties[:dbname] = @dbtestname
-        conn = PG::Connection.new(conn_properties)
+        conn = PG::Connection.open(conn_properties)
 
         yield conn
 

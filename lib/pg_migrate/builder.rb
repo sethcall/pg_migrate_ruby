@@ -22,11 +22,11 @@ module PgMigrate
 
     # input_dir is root path, contains file 'manifest' and 'migrations'
     # output_dir will have a manifest and migrations folder, but processed
-    # create_output_dir will create the output dir if needed
-    def build(input_dir, output_dir, create_output_dir=true)
+    # force will create the output dir if needed, and *delete an existing directory* if it's in the way
+    def build(input_dir, output_dir, options={:force=>true})
       input_dir = File.expand_path(input_dir)
       output_dir = File.expand_path(output_dir)
-
+                                                      
       if input_dir == output_dir
         raise 'input_dir can not be same as output_dir: #{input_dir}'
       end
@@ -35,7 +35,7 @@ module PgMigrate
 
       output = Pathname.new(output_dir)
       if !output.exist?
-        if !create_output_dir
+        if !options[:force]
           raise "Output directory '#{output_dir}' does not exist.  Create it or specify create_output_dir=true"
         else
           output.mkpath
@@ -44,6 +44,10 @@ module PgMigrate
         # verify that it's is a directory
         if !output.directory?
           raise "output_dir #{output_dir} is a file; not a directory."
+        else
+          @log.debug("deleting & recreating existing output_dir #{output_dir}")
+          output.rmtree
+          output.mkpath
         end
       end
 
@@ -54,17 +58,17 @@ module PgMigrate
       output_manifest = File.join(output_dir, MANIFEST_FILENAME)
 
       File.open(output_manifest, 'w') do |fout|
-        fout.puts "# pg_migrate-#{PgMigrate::VERSION}"
+        fout.puts "#{BUILDER_VERSION_HEADER}pg_migrate_ruby-#{PgMigrate::VERSION}"
         IO.readlines(input_manifest).each do |input|
           fout.puts input
         end
       end
 
       # in order array of manifest declarations
-      loaded_manifest = @manifest_reader.load_manifest(input_dir)
+      loaded_manifest = @manifest_reader.load_input_manifest(input_dir)
       # hashed on migration name hash of manifest
-      loaded_manifest_hash = @manifest_reader.hash_loaded_manifest(loaded_manifest)
 
+      loaded_manifest_hash = @manifest_reader.hash_loaded_manifest(loaded_manifest)
       @manifest_reader.validate_migration_paths(input_dir, loaded_manifest)
 
       build_up(input_dir, output_dir, loaded_manifest_hash)
@@ -104,6 +108,7 @@ module PgMigrate
     end
 
     def create_wrapped_up_migration(migration_in_filepath, migration_out_filepath, migration_def)
+    builder_version="pg_migrate_ruby-#{PgMigrate::VERSION}"
       migration_content = nil
       File.open(migration_in_filepath, 'r') {|reader| migration_content = reader.read }
       run_template("up.erb", binding, File.join(migration_out_filepath))
