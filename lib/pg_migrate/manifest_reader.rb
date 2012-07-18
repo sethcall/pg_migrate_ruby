@@ -55,7 +55,7 @@ module PgMigrate
       @log.debug "loading manifest from #{manifest_path}"
 
       if !FileTest::exist?(manifest_filepath)
-        raise "unable to load manifest: not found at #{manifest_path}"
+        raise "ManifestReader: code=unloadable_manifest: manifest not found at #{manifest_path}"
       end
 
       # there should be a file called 'manifest' at this location

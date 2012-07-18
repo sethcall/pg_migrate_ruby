@@ -1,4 +1,6 @@
 require 'logging'
+require 'pg'
+require 'thor'
 require "pg_migrate/version"
 require "pg_migrate/migration"
 require "pg_migrate/sql_reader"
@@ -6,7 +8,7 @@ require "pg_migrate/manifest_reader"
 require "pg_migrate/migrator"
 require "pg_migrate/config_parser"
 require "pg_migrate/builder"
-
+require "pg_migrate/command_line"
 
 # name of the manifest file
 MANIFEST_FILENAME = 'manifest'

@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+require 'pg_migrate'
+
+include PgMigrate
+
+CommandLine.start

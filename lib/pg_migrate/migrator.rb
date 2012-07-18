@@ -1,13 +1,10 @@
-require 'pg'
-
-
 module PgMigrate
-
-  attr_accessor :conn, :connection_hash, :manifest_path, :manifest, :manifest_reader, :sql_reader
 
   class Migrator
 
-    # options = gem 'pg' connection_hash options
+    attr_accessor :conn, :connection_hash, :manifest_path, :manifest, :manifest_reader, :sql_reader
+
+    # options = gem 'pg' connection_hash options, or connstring => dbname=test port=5432, or pgconn => PG::Connection object
     def initialize(manifest_reader, sql_reader, options = {})
       @log = Logging.logger[self]
       @connection_hash = options
@@ -21,11 +18,14 @@ module PgMigrate
     # The manifest_path argument should point to your manifest
     # manifest_path = the directory containing your 'manifest' file, 'up' directory, 'down' directory, 'test' directory
     # this method will throw an exception if anything goes wrong (such as bad SQL in the migrations themselves)
+
     def migrate(manifest_path)
       @manifest_path = manifest_path
 
       if !@connection_hash[:pgconn].nil?
         @conn = @connection_hash[:pgconn]
+      elsif !@connection_hash[:connstring].nil?
+        @conn = PG::Connection.open(@connection_hash[:connstring])
       else
         @conn = PG::Connection.open(@connection_hash)
       end
@@ -39,6 +39,7 @@ module PgMigrate
       # execute the migrations
       run_migrations()
     end
+
 
     # load the manifest's migration declarations, and validate that each migration points to a real file
     def process_manifest
@@ -79,19 +80,19 @@ module PgMigrate
     # execute all the statements of a single migration
     def run_migration(name, statements)
 
-      @conn.transaction do |transaction|
-        begin
-          statements.each do |statement|
-            transaction.exec(statement).clear
-          end
-        rescue Exception => e
-          # we make a special allowance for one exception; it just means this migration
-          # has already occured, and we should just treat it like a continue
-          if e.message.index('pg_migrate: code=migration_exists').nil?
-            raise e
-          else
-            @log.debug "skipping migration #{name}"
-          end
+      begin
+        statements.each do |statement|
+          conn.exec(statement).clear
+        end
+      rescue Exception => e
+        # we make a special allowance for one exception; it just means this migration
+        # has already occured, and we should just treat it like a continue
+        if e.message.index('pg_migrate: code=migration_exists').nil?
+          conn.exec("ROLLBACK")
+          raise e
+        else
+          conn.exec("ROLLBACK")
+          @log.info "migration #{name} already run"
         end
       end
     end
