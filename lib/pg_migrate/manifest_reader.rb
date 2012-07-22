@@ -52,18 +52,17 @@ module PgMigrate
 
       manifest_filepath = File.join(manifest_path, MANIFEST_FILENAME)
 
-      @log.debug "loading manifest from #{manifest_path}"
-
-      if !FileTest::exist?(manifest_filepath)
-        raise "ManifestReader: code=unloadable_manifest: manifest not found at #{manifest_path}"
-      end
+      @log.debug "loading manifest from #{manifest_filepath}"
 
       # there should be a file called 'manifest' at this location
+      if !FileTest::exist?(manifest_filepath)
+        raise "ManifestReader: code=unloadable_manifest: manifest not found at #{manifest_filepath}"
+      end
+
       manifest_lines = IO.readlines(manifest_filepath)
 
       ordinal = 0
       manifest_lines.each_with_index do |line, index|
-        # ignore comments
         migration_name = line.strip
 
         @log.debug "processing line:#{index} #{line}"
@@ -76,15 +75,16 @@ module PgMigrate
               version = migration_name[BUILDER_VERSION_HEADER.length..-1]
               @log.debug "manifest has builder_version #{version}"
             else
-              raise "manifest invalid: missing/malformed version.  expecting '# pg_migrate-VERSION' to begin first line '#{line}' of manifest file: '#{manifest_path}'"
+              raise "manifest invalid: missing/malformed version.  expecting '# pg_migrate-VERSION' to begin first line '#{line}' of manifest file: '#{manifest_filepath}'"
             end
           end
         end
 
+        # ignore comments
         if migration_name.empty? or migration_name.start_with?('#')
           # ignored!
         else
-          @log.debug "adding manifest #{migration_name} with ordinal #{ordinal}"
+          @log.debug "adding migration #{migration_name} with ordinal #{ordinal}"
           manifest.push(Migration.new(migration_name, ordinal, build_migration_path(manifest_path, migration_name)))
           ordinal += 1
         end

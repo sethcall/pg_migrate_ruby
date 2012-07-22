@@ -8,9 +8,7 @@ module PgMigrate
   # takes a unprocessed manifest directory, and adds before/after headers to each file
   class Builder
 
-
     attr_accessor :manifest_reader, :sql_reader
-
 
     def initialize(manifest_reader, sql_reader)
       @log = Logging.logger[self]
@@ -71,10 +69,10 @@ module PgMigrate
       loaded_manifest_hash = @manifest_reader.hash_loaded_manifest(loaded_manifest)
       @manifest_reader.validate_migration_paths(input_dir, loaded_manifest)
 
-      build_up(input_dir, output_dir, loaded_manifest_hash)
+      build_up(input_dir, output_dir, loaded_manifest_hash, loaded_manifest)
     end
 
-    def build_up(input_dir, output_dir, loaded_manifest_hash)
+    def build_up(input_dir, output_dir, loaded_manifest_hash, loaded_manifest)
       migrations_input = File.join(input_dir, UP_DIRNAME)
       migrations_output = File.join(output_dir, UP_DIRNAME)
 
@@ -95,7 +93,7 @@ module PgMigrate
           # create the filename correct for the output directory, for this file
           migration_out_path = File.join(migrations_output, relative_path)
 
-          process_and_copy_up(migration_in_path, migration_out_path, relative_path, loaded_manifest_hash)
+          process_and_copy_up(migration_in_path, migration_out_path, relative_path, loaded_manifest_hash, loaded_manifest)
         end
       end
 
@@ -107,8 +105,9 @@ module PgMigrate
       run_template("bootstrap.erb", binding, File.join(migration_out_path, BOOTSTRAP_FILENAME))
     end
 
-    def create_wrapped_up_migration(migration_in_filepath, migration_out_filepath, migration_def)
-    builder_version="pg_migrate_ruby-#{PgMigrate::VERSION}"
+    def create_wrapped_up_migration(migration_in_filepath, migration_out_filepath, migration_def, loaded_manifest)
+      builder_version="pg_migrate_ruby-#{PgMigrate::VERSION}"
+      manifest_version=loaded_manifest[-1].ordinal
       migration_content = nil
       File.open(migration_in_filepath, 'r') {|reader| migration_content = reader.read }
       run_template("up.erb", binding, File.join(migration_out_filepath))
@@ -129,7 +128,7 @@ module PgMigrate
       end
     end
 
-    def process_and_copy_up(migration_in_path, migration_out_path, relative_path, loaded_manifest_hash)
+    def process_and_copy_up(migration_in_path, migration_out_path, relative_path, loaded_manifest_hash, loaded_manifest)
 
       if FileTest.directory?(migration_in_path)
         # copy over directories
@@ -147,7 +146,7 @@ module PgMigrate
 
           migration_def = loaded_manifest_hash[manifest_name]
 
-          create_wrapped_up_migration(migration_in_path, migration_out_path, migration_def)
+          create_wrapped_up_migration(migration_in_path, migration_out_path, migration_def, loaded_manifest)
         else
           # if not a .sql file, just copy it over
           FileUtils.cp(migration_in_path, migration_out_path)

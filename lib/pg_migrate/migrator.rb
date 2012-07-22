@@ -72,7 +72,7 @@ module PgMigrate
 
       statements = @sql_reader.load_migration(filepath)
       if statements.length == 0
-        raise 'no statements found in migration #{migration_path}'
+        raise 'no statements found in migration #{filepath}'
       end
       run_migration(name, statements)
     end
@@ -86,7 +86,7 @@ module PgMigrate
         end
       rescue Exception => e
         # we make a special allowance for one exception; it just means this migration
-        # has already occured, and we should just treat it like a continue
+        # has already occurred, and we should just treat it like a continue
         if e.message.index('pg_migrate: code=migration_exists').nil?
           conn.exec("ROLLBACK")
           raise e
