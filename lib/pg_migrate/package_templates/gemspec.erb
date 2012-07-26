@@ -1,0 +1,21 @@
+# -*- encoding: utf-8 -*-
+require File.expand_path('../lib/<%= name %>/version', __FILE__)
+lib=File.expand_path('../lib', __FILE__)
+
+
+Gem::Specification.new do |gem|
+  gem.authors       = ["<%= author %>"]
+  gem.email         = ["<%= email %> "]
+  gem.description   = %q{A pg_migrate bundle for <%= name %>}
+  gem.summary       = %q{A pg_migrate bundle built by pg_migrate, containing the schemas of <%= name  %>)}
+  gem.homepage      = "https://github.com/sethcall/pg_migrate"
+
+  gem.files         = <%= gemfiles %>
+  gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
+  gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
+  gem.name          = "<%= name %>"
+  gem.require_paths = ["lib"]
+  gem.version       = <%= constant_name %>::VERSION
+
+  gem.add_dependency('pg_migrate', '<%= pg_migrate_version %>')
+end

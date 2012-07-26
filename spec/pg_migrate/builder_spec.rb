@@ -71,6 +71,8 @@ describe Builder do
 
     output_dir = File.join('target', 'output_single_manifest')
 
+    FileUtils.rm_rf(output_dir)
+
     @standard_builder.build(input_dir, output_dir)
 
     @dbutil.create_new_test_database()

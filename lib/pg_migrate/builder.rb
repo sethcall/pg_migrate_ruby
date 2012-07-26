@@ -24,7 +24,7 @@ module PgMigrate
     def build(input_dir, output_dir, options={:force=>true})
       input_dir = File.expand_path(input_dir)
       output_dir = File.expand_path(output_dir)
-                                                      
+
       if input_dir == output_dir
         raise 'input_dir can not be same as output_dir: #{input_dir}'
       end
@@ -34,7 +34,7 @@ module PgMigrate
       output = Pathname.new(output_dir)
       if !output.exist?
         if !options[:force]
-          raise "Output directory '#{output_dir}' does not exist.  Create it or specify create_output_dir=true"
+          raise "Output directory '#{output_dir}' does not exist.  Create it or specify force=true"
         else
           output.mkpath
         end
@@ -59,6 +59,18 @@ module PgMigrate
         fout.puts "#{BUILDER_VERSION_HEADER}pg_migrate_ruby-#{PgMigrate::VERSION}"
         IO.readlines(input_manifest).each do |input|
           fout.puts input
+        end
+      end
+
+      # if .pg_migrate file exists, copy it
+      input_pg_config = File.join(input_dir, PG_CONFIG)
+      if FileTest::exist? input_pg_config
+        output_pg_config = File.join(output_dir, PG_CONFIG)
+
+        File.open(output_pg_config, 'w') do |fout|
+          IO.readlines(input_pg_config).each do |input|
+            fout.puts input
+          end
         end
       end
 
@@ -109,7 +121,7 @@ module PgMigrate
       builder_version="pg_migrate_ruby-#{PgMigrate::VERSION}"
       manifest_version=loaded_manifest[-1].ordinal
       migration_content = nil
-      File.open(migration_in_filepath, 'r') {|reader| migration_content = reader.read }
+      File.open(migration_in_filepath, 'r') { |reader| migration_content = reader.read }
       run_template("up.erb", binding, File.join(migration_out_filepath))
     end
 
