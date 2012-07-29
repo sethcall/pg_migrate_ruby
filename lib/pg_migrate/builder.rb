@@ -88,6 +88,10 @@ module PgMigrate
       migrations_input = File.join(input_dir, UP_DIRNAME)
       migrations_output = File.join(output_dir, UP_DIRNAME)
 
+      if(!FileTest::exist? migrations_input)
+        raise "'up' directory must exist at #{migrations_input}"
+      end
+
       # iterate through files in input migrations path, wrapping files with transactions and other required bits
 
       Find.find(migrations_input) do |path|
