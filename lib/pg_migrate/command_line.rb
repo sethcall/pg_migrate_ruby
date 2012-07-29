@@ -18,7 +18,7 @@ module PgMigrate
 
     desc "up", "migrates the database forwards, applying migrations found in the source directory"
     method_option :source, :aliases => "-s", :default => nil, :banner => 'input directory', :desc => "a pg_migrate built manifest. Should contain your processed manifest and up|down|test folders"
-    method_option :connopts, :aliases => "-o", :type => :hash, :required => true, :banner => "connection options", :desc => "database connection options used by gem 'pg': dbname|host|hostaddr|port|user|password|connection_timeout|options|sslmode|krbsrvname|gsslib|service"
+    method_option :connopts, :aliases => "-c", :type => :hash, :required => true, :banner => "connection options", :desc => "database connection options used by gem 'pg': dbname|host|hostaddr|port|user|password|connection_timeout|options|sslmode|krbsrvname|gsslib|service"
     method_option :verbose, :aliases => "-v", :type => :boolean, :banner => "verbose", :desc=> "set to raise verbosity"
 
     def up
@@ -29,7 +29,7 @@ module PgMigrate
       end
 
       method_defaults = {"verbose" => false}
-      local_options = set_defaults_from_file(method_defaults, source)
+      local_options = set_defaults_from_file(method_defaults, "up", source)
       local_options = local_options.merge(options)
 
       bootstrap_logger(local_options["verbose"])
@@ -87,7 +87,7 @@ module PgMigrate
       end
 
       method_defaults = {"force" => false, "verbose" => false}
-      local_options = set_defaults_from_file(method_defaults, source)
+      local_options = set_defaults_from_file(method_defaults, "build", source)
       local_options = local_options.merge(options)
 
       bootstrap_logger(local_options["verbose"])
@@ -96,7 +96,7 @@ module PgMigrate
         puts "error: --out not specified"
         exit 1
       end
-      
+
       manifest_reader = ManifestReader.new
       sql_reader = SqlReader.new
       builder = Builder.new(manifest_reader, sql_reader)
@@ -106,7 +106,7 @@ module PgMigrate
 
     desc "package", "packages a built pg_migrate project into a custom gem containing schemas and simpler migration interface"
     method_option :source, :aliases => "-s", :default => nil, :banner => 'input directory', :desc => "the input directory containing a manifest file and up|down|test folders that has been previously built by pg_migrate build"
-    method_option :out, :aliases => "-o", :banner => "output directory", :desc => "where the gem will be placed (as well as the exploded gem's contents"
+    method_option :out, :aliases => "-o", :banner => "output directory", :desc => "where the gem will be placed (as well as the exploded gem's contents)"
     method_option :name, :aliases => "-n", :banner => "the name of the schema gem", :desc => "the name of the gem"
     method_option :version, :aliases => "-e", :banner => "the version of the schema gem", :desc => "the version of the gem"
     method_option :force, :aliases => "-f", :type => :boolean, :banner => "overwrite out", :desc => "if specified, the out directory will be created before processing occurs, replacing any existing directory"
@@ -120,7 +120,7 @@ module PgMigrate
       end
 
       method_defaults = {"force" => false, "verbose" => false}
-      local_options = set_defaults_from_file(method_defaults, source)
+      local_options = set_defaults_from_file(method_defaults, "package", source)
       local_options = local_options.merge(options)
 
       if !local_options["out"]
@@ -156,20 +156,35 @@ module PgMigrate
       end
 
 
-      def set_defaults_from_file(default_options, source)
-        @file_defaults = @file_defaults ||= load_file(source)
+      def set_defaults_from_file(default_options, context, source)
+        @file_defaults = @file_defaults ||= load_file(context, source)
         merged = default_options.merge(@file_defaults)
       end
 
-      def load_file(source)
+      def load_file(context, source)
 
+        defaults = nil
         config = File.join(source, PG_CONFIG)
         if FileTest::exist? (config)
           puts "found #{PG_CONFIG}"
-          @file_defaults = Properties.new(config)
+          defaults = Properties.new(config)
         else
-          @file_defaults = Properties.new
+          defaults = Properties.new
         end
+
+        map = {}
+        defaults.each_pair do |k, v|
+          map[k.upcase] = v
+
+          # make a context-removed version of a key, if it starts with 'context.'
+          prefix = "#{context}."
+          if k.start_with? prefix
+            map[k[prefix.length..-1]] = v
+          end
+        end
+
+        return map
+
       end
     end
 

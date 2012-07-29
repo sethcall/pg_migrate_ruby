@@ -25,9 +25,9 @@ describe CommandLine do
 
     # make a properties file on the fly, with the out parameter specified
     props = Properties.new
-    props['out'] = output_dir
-    props['force'] = "true"
-    #props['connopts'] = "dbname:pg_migrate_test host:localhost port:5432 user:postgres password:postgres"
+    props['build.out'] = output_dir
+    props['build.force'] = "true"
+    #props['up.connopts'] = "dbname:pg_migrate_test host:localhost port:5432 user:postgres password:postgres"
 
     # and put that properties file in the input dir
     File.open(File.join(input_dir, PG_CONFIG), 'w') { |f| f.write(props) }

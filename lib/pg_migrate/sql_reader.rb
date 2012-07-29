@@ -26,12 +26,13 @@ module PgMigrate
           current_statement += " " + line_stripped;
 
           if line_stripped.end_with?(";")
-            if current_statement =~ /^\s*CREATE\s+(OR\s+REPLACE\s+)?FUNCTION/i
+            if current_statement =~ /^\s*CREATE\s+(OR\s+REPLACE\s+)?FUNCTION/i || current_statement =~ /^\s*DO\s+/i
               # if we are in a function, a ';' isn't enough to end.  We need to see if the last word was one of
-              # pltcl, plperl, plpgsql, plpythonu, sql.
+              # pltcl, plperl, plpgsql, plpythonu, sql
               # you can extend languages in postgresql; detecting these isn't supported yet.
 
-              if current_statement =~ /(plpgsql|plperl|plpythonu|pltcl|sql)\s*;$/i
+              # we also detect anonymous functions (DO) and their ending sequence.
+              if current_statement =~ /(plpgsql|plperl|plpythonu|pltcl|sql)\s*;$/i || current_statement =~ /END\s+\$\$\s+(LANGUAGE\s+(plpgsql|plperl|plpythonu|pltcl|sql))?\s*;$/i
                 statements.push(current_statement[0...-1]) # strip off last ;
                 current_statement = ""
               end

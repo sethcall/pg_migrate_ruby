@@ -25,7 +25,7 @@ describe Migrator do
           end
 
           pg_migration_id = nil
-          transaction.exec("SELECT * FROM pg_migrations") do |result|
+          transaction.exec("SELECT * FROM pgmigrate.pg_migrations") do |result|
             result.ntuples.should == 1
             result[0]["name"].should == "single1.sql"
             result[0]["ordinal"].should == "0"
@@ -34,9 +34,9 @@ describe Migrator do
           pg_migration_id.should_not == nil
 
           # verify that a database row in pg_migrate was created as side-effect
-          transaction.exec("SELECT * FROM pg_migrate WHERE id = $1", [pg_migration_id]) do |result|
+          transaction.exec("SELECT * FROM pgmigrate.pg_migrate WHERE id = $1", [pg_migration_id]) do |result|
             result.ntuples.should == 1
-            result[0]["template_version"].should == "0.0.1"
+            result[0]["template_version"].should == "0.1.0"
             result[0]["builder_version"].should == "pg_migrate_ruby-#{PgMigrate::VERSION}"
             result[0]["migrator_version"].should == "pg_migrate_ruby-#{PgMigrate::VERSION}"
             result[0]["database_version"].should_not be nil
