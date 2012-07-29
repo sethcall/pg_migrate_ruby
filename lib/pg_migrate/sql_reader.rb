@@ -32,7 +32,7 @@ module PgMigrate
               # you can extend languages in postgresql; detecting these isn't supported yet.
 
               # we also detect anonymous functions (DO) and their ending sequence.
-              if current_statement =~ /(plpgsql|plperl|plpythonu|pltcl|sql)\s*;$/i || current_statement =~ /END\s+\$\$\s+(LANGUAGE\s+(plpgsql|plperl|plpythonu|pltcl|sql))?\s*;$/i
+              if current_statement =~ /(plpgsql|plperl|plpythonu|pltcl|sql)\s*;$/i || current_statement =~ /END\s*\$\$\s+(LANGUAGE\s+(plpgsql|plperl|plpythonu|pltcl|sql))?\s*;$/i
                 statements.push(current_statement[0...-1]) # strip off last ;
                 current_statement = ""
               end
