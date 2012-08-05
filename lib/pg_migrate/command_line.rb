@@ -18,7 +18,7 @@ module PgMigrate
 
     desc "up", "migrates the database forwards, applying migrations found in the source directory"
     method_option :source, :aliases => "-s", :default => nil, :banner => 'input directory', :desc => "a pg_migrate built manifest. Should contain your processed manifest and up|down|test folders"
-    method_option :connopts, :aliases => "-c", :type => :hash, :required => true, :banner => "connection options", :desc => "database connection options used by gem 'pg': dbname|host|hostaddr|port|user|password|connection_timeout|options|sslmode|krbsrvname|gsslib|service"
+    method_option :connopts, :aliases => "-c", :type => :hash, :banner => "connection options", :desc => "database connection options used by gem 'pg': dbname|host|hostaddr|port|user|password|connection_timeout|options|sslmode|krbsrvname|gsslib|service"
     method_option :verbose, :aliases => "-v", :type => :boolean, :banner => "verbose", :desc=> "set to raise verbosity"
 
     def up
