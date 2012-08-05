@@ -133,6 +133,7 @@ module PgMigrate
       rescue PG::Error => pge
         puts "test failure"
         puts pge
+        exit 1
       end
 
     end
