@@ -8,7 +8,7 @@ module PgMigrate
   # takes a unprocessed manifest directory, and adds before/after headers to each file
   class Builder
 
-    attr_accessor :manifest_reader, :sql_reader
+    attr_accessor :manifest_reader, :sql_reader, :loaded_manifest
 
     def initialize(manifest_reader, sql_reader)
       @log = Logging.logger[self]
@@ -21,7 +21,8 @@ module PgMigrate
     # input_dir is root path, contains file 'manifest' and 'migrations'
     # output_dir will have a manifest and migrations folder, but processed
     # force will create the output dir if needed, and *delete an existing directory* if it's in the way
-    def build(input_dir, output_dir, options={:force=>true})
+    # test will run tests
+    def build(input_dir, output_dir, options={:force=>true, :test=>false})
       input_dir = File.expand_path(input_dir)
       output_dir = File.expand_path(output_dir)
 
@@ -75,13 +76,18 @@ module PgMigrate
       end
 
       # in order array of manifest declarations
-      loaded_manifest = @manifest_reader.load_input_manifest(input_dir)
+      @loaded_manifest = @manifest_reader.load_input_manifest(input_dir)
       # hashed on migration name hash of manifest
 
       loaded_manifest_hash = @manifest_reader.hash_loaded_manifest(loaded_manifest)
       @manifest_reader.validate_migration_paths(input_dir, loaded_manifest)
 
       build_up(input_dir, output_dir, loaded_manifest_hash, loaded_manifest)
+    
+      # ok we are done. time to test!
+      if options[:test]
+        test(output_dir, options)
+      end
     end
 
     def build_up(input_dir, output_dir, loaded_manifest_hash, loaded_manifest)
@@ -118,10 +124,13 @@ module PgMigrate
 
     # creates the 'pg_migrations table'
     def create_bootstrap_script(migration_out_path)
+      @log.debug "creating bootstrap script #{migration_out_path}"
       run_template("bootstrap.erb", binding, File.join(migration_out_path, BOOTSTRAP_FILENAME))
     end
 
     def create_wrapped_up_migration(migration_in_filepath, migration_out_filepath, migration_def, loaded_manifest)
+      @log.debug "securing migration #{migration_def.name}"
+      
       builder_version="pg_migrate_ruby-#{PgMigrate::VERSION}"
       manifest_version=loaded_manifest[-1].ordinal
       migration_content = nil
@@ -164,10 +173,40 @@ module PgMigrate
 
           create_wrapped_up_migration(migration_in_path, migration_out_path, migration_def, loaded_manifest)
         else
+          @log.debug "copying non-sql file #{migration_in_path}"
           # if not a .sql file, just copy it over
           FileUtils.cp(migration_in_path, migration_out_path)
         end
       end
     end
+
+    def recreate_test_database(conn, test_db_name)
+        @log.debug "recreate test database #{test_db_name}"
+
+        conn.exec("drop database if exists #{test_db_name}")
+        conn.exec("create database #{test_db_name}")
+      end
+
+      def test(output_dir, test_options)
+
+        @log.info "testing..."
+        
+        oobconn = Util::get_oob_conn(test_options)
+        target_dbname = Util::get_db_name(test_options)
+
+        run_manifests = []
+
+
+        recreate_test_database(oobconn, target_dbname)
+
+        conn = Util::get_conn(test_options)
+
+        migrator = Migrator.new(manifest_reader, sql_reader, :pgconn => conn)
+        migrator.migrate(output_dir)
+        conn.close
+
+        @log.info "test success"
+
+      end
   end
 end

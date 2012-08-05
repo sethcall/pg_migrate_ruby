@@ -27,6 +27,7 @@ describe CommandLine do
     props = Properties.new
     props['build.out'] = output_dir
     props['build.force'] = "true"
+    props['build.test'] = "false"
     #props['up.connopts'] = "dbname:pg_migrate_test host:localhost port:5432 user:postgres password:postgres"
 
     # and put that properties file in the input dir

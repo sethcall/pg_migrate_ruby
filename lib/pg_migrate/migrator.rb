@@ -18,17 +18,10 @@ module PgMigrate
     # The manifest_path argument should point to your manifest
     # manifest_path = the directory containing your 'manifest' file, 'up' directory, 'down' directory, 'test' directory
     # this method will throw an exception if anything goes wrong (such as bad SQL in the migrations themselves)
-
     def migrate(manifest_path)
       @manifest_path = manifest_path
 
-      if !@connection_hash[:pgconn].nil?
-        @conn = @connection_hash[:pgconn]
-      elsif !@connection_hash[:connstring].nil?
-        @conn = PG::Connection.open(@connection_hash[:connstring])
-      else
-        @conn = PG::Connection.open(@connection_hash)
-      end
+      @conn = Util::get_conn(@connection_hash)
 
       # this is used to record the version of the 'migrator' in the pg_migrate table
       @conn.exec("SET application_name = 'pg_migrate_ruby-#{PgMigrate::VERSION}'")
@@ -37,7 +30,7 @@ module PgMigrate
       process_manifest()
 
       # execute the migrations
-      run_migrations()
+      run_migrations(@manifest)
     end
 
 
@@ -48,7 +41,7 @@ module PgMigrate
     end
 
     # run all necessary migrations
-    def run_migrations
+    def run_migrations(manifest)
 
       # run bootstrap before user migrations to prepare database
       run_bootstrap
@@ -68,7 +61,7 @@ module PgMigrate
 
     # execute a single migration by loading it's statements from file, and then executing each
     def execute_migration(name, filepath)
-      @log.debug "executing migration #{filepath}"
+      @log.info "executing migration #{filepath}"
 
       statements = @sql_reader.load_migration(filepath)
       if statements.length == 0

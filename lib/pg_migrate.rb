@@ -11,6 +11,7 @@ require "pg_migrate/config_parser"
 require "pg_migrate/builder"
 require "pg_migrate/package"
 require "pg_migrate/command_line"
+require "pg_migrate/util"
 
 # name of the manifest file
 MANIFEST_FILENAME = 'manifest'
