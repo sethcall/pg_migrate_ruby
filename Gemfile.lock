@@ -1,15 +1,16 @@
+GIT
+  remote: git@github.com:sethcall/files.git
+  revision: 9107f3ae6e24dbe67d8b1d27be6d122d72436382
+  specs:
+    files (0.2.1)
+
 PATH
   remote: .
   specs:
-    pg_migrate (0.1.4)
+    pg_migrate (0.1.5)
       logging (= 1.7.2)
       pg (= 0.14.0)
       thor (= 0.15.4)
-
-PATH
-  remote: /Users/seth/workspace/files
-  specs:
-    files (0.2.1)
 
 GEM
   remote: https://rubygems.org/
