@@ -8,8 +8,6 @@ With this gem, there are two primary features:
 
 ## Installation
 
-**NOTE: this gem is not yet published**
-
 Add this line to your application's Gemfile:
 
     gem 'pg_migrate'
