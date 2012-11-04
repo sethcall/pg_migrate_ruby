@@ -171,7 +171,9 @@ module PgMigrate
 
           migration_def = loaded_manifest_hash[manifest_name]
 
-          create_wrapped_up_migration(migration_in_path, migration_out_path, migration_def, loaded_manifest)
+          unless migration_def.nil?
+            create_wrapped_up_migration(migration_in_path, migration_out_path, migration_def, loaded_manifest)
+          end
         else
           @log.debug "copying non-sql file #{migration_in_path}"
           # if not a .sql file, just copy it over

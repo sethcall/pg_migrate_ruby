@@ -38,7 +38,7 @@ module PgMigrate
       sql_reader = SqlReader.new
 
       connopts = local_options["connopts"]
-      if !connopts["port"].nil?
+      if !connopts.nil? && !connopts["port"].nil?
         connopts[:port] = connopts[:port].to_i
       end
 
