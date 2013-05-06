@@ -1,6 +1,6 @@
 # PgMigrate
 
-The ruby implementation of pg_migrate.  
+The ruby implementation of pg_migrate.  *Does not currently support Ruby 2.0!*
 
 With this gem, there are two primary features:
 * Manifest Builder - process a user's pg_migrate manifest into a stable set of SQL migration scripts
