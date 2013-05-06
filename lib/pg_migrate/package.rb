@@ -1,8 +1,14 @@
 require 'erb'
 require 'fileutils'
 require 'rubygems'
-require 'rubygems/builder'
-#require 'rubygems/package'
+
+begin 
+    # this occurs in rubygems < 2.0.0
+    require 'rubygems/builder'
+rescue LoadError
+    # this occurs in rubygems > 2.0.0
+    require 'rubygems/package'
+end
 
 module PgMigrate
   class Package
@@ -101,7 +107,11 @@ module PgMigrate
       
       @log.debug "packaging gem"
       Dir.chdir(output_dir) do
-        Gem::Builder.new(spec).build
+        if defined?(Gem::Builder)
+          Gem::Builder.new(spec).build
+        else
+          Gem::Package.build(spec)
+        end
       end
       #Gem::Package.build spec, false
     end

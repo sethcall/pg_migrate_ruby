@@ -7,7 +7,7 @@ GIT
 PATH
   remote: .
   specs:
-    pg_migrate (0.1.5)
+    pg_migrate (0.1.6)
       logging (= 1.7.2)
       pg (= 0.14.0)
       thor (= 0.15.4)
