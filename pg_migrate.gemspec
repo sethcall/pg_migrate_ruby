@@ -22,7 +22,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency('logging', '1.7.2')
   
   gem.add_dependency('pg', '0.17.1')
-  gem.add_dependency('thor', '0.15.4')
+  gem.add_dependency('thor')
   #gem.add_dependency('rubygems', '1.8.24')
 
 end
